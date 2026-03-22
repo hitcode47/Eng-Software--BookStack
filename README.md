@@ -1,10 +1,10 @@
-# 📌 Nome do Projeto
+# 📌 LynkBank
 
 ## 👥 Equipe
 - **Nome Completo 1** — Backend  
-- **Nome Completo 2** — Frontend  
-- **Nome Completo 3** — Fullstack  
-- **Nome Completo 4** — Backend  
+- **Bruno dos Santos Lopes** — Frontend  
+- **Nome Completo 3** — Banco de Dados  
+- **Nome Completo 4** — Integração e Testes  
 
 ---
 
@@ -17,10 +17,10 @@ Por fim, pretende-se integrar **[tecnologias ou diferencial, como IoT/IA]** para
 ---
 
 ## 🛠️ Tecnologias Utilizadas
-- **Linguagem:**  
-- **Framework(s):**  
+- **Linguagem: JavaScript,**  
+- **Framework(s): React,**  
 - **Banco de Dados:**  
-- **Agentes de IA (se houver):**  
+- **Agentes de IA (se houver): ChatGPT**  
 - **Outros:**  
 
 ---
