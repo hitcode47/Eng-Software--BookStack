@@ -1,4 +1,4 @@
-# 📌 LynkBank
+# 📚 BookStack
 
 ## 👥 Equipe
 - **Paulo Vitor da Silva Rodrigues** — Backend  
@@ -9,10 +9,10 @@
 ---
 
 ## 🎯 Objetivo do Sistema
-Este projeto tem como objetivo desenvolver um sistema capaz de **simplificar a gestão financeira pessoal e agilizar as transações bancárias do dia a dia.**.  
-A proposta consiste em **criar um Banco Digital focado em operações essenciais (como transferências, pagamentos e consulta de saldo)**, permitindo que **os usuários consigam controlar seu dinheiro de forma acessível e intuitiva**.  
-Além disso, o sistema busca **fornecer um extrato detalhado com o histórico completo das movimentações**, garantindo **maior organização e controle de gastos para o cliente**.  
-Por fim, pretende-se integrar **tecnologias web ágeis (como Python/Flask) e o uso de agentes de IA (como Gemini, Cursor e Copilot Chat) no ciclo de desenvolvimento** para aumentar a eficiência e usabilidade.  
+Este projeto tem como objetivo desenvolver um sistema capaz de **simplificar a gestão de bibliotecas e otimizar o controle de empréstimos e devoluções de livros.**
+A proposta consiste em **criar uma plataforma digital que permita o cadastro de usuários e obras, bem como o gerenciamento eficiente do acervo, possibilitando que os leitores encontrem e solicitem livros de forma rápida, acessível e intuitiva.**
+Além disso, o sistema busca **registrar e acompanhar todas as movimentações, como empréstimos, devoluções e reservas,** garantindo **maior organização e rastreabilidade das operações da biblioteca.**
+Por fim, pretende-se integrar **tecnologias web modernas e boas práticas de engenharia de software no desenvolvimento,** visando uma **solução funcional, escalável e de fácil utilização.**
 
 ---
 
