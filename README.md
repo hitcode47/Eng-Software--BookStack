@@ -30,7 +30,7 @@ Por fim, pretende-se integrar **tecnologias web modernas e boas práticas de eng
 2. Como usuário, quero **excluir minha conta**, para encerrar vínculo com a biblioteca.
 3. Como bibliotecário, quero **cadastrar livros**, para atualizar o sistema.   
 4. Como usuário, quero **pesquisar obras**, para encontrar rapidamente o que preciso.  
-5. Como xxxxx, quero **xxxxx**, para xxxxxxxxxxxx.
-6. Como xxxxx, quero **xxxxx**, para xxxxxxxxxxxx.
+5. Como usuário, quero **pegar pegar um livro emprestado**, para retirá-lo da biblioteca e ficar com ele por um tempo.
+6. Como usuário, quero **devolver um livro**, para manter minha matrícula regularizada quanto aos empréstimos em bibliotecas.
 7. Como xxxxx, quero **xxxxx**, para xxxxxxxxxxxx.
 8. Como xxxxx, quero **xxxxx**, para xxxxxxxxxxxx.  
