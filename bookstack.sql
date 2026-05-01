@@ -5,135 +5,135 @@ SET lock_timeout = 0;
 SET client_encoding = 'UTF8';
 
 -- drop tables
-DROP TABLE IF EXISTS reserva CASCADE;
-DROP TABLE IF EXISTS emprestimo CASCADE;
-DROP TABLE IF EXISTS exemplar CASCADE;
-DROP TABLE IF EXISTS obra CASCADE;
-DROP TABLE IF EXISTS usuario CASCADE;
-DROP TABLE IF EXISTS bibliotecario CASCADE;
+DROP TABLE IF EXISTS reservation CASCADE;
+DROP TABLE IF EXISTS loan CASCADE;
+DROP TABLE IF EXISTS copy CASCADE;
+DROP TABLE IF EXISTS work CASCADE;
+DROP TABLE IF EXISTS user CASCADE;
+DROP TABLE IF EXISTS librarian CASCADE;
 
 -- tabela usuario
-CREATE TABLE usuario (
-    id_usuario SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
+CREATE TABLE user (
+    id_user SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
-    senha VARCHAR(100) NOT NULL,
+    password VARCHAR(100) NOT NULL,
     status VARCHAR(20) DEFAULT 'ativo'
 );
 
 
 -- tabela bibliotecario
-CREATE TABLE bibliotecario (
-    id_bibliotecario SERIAL PRIMARY KEY,
-    nome VARCHAR(100) NOT NULL,
+CREATE TABLE librarian (
+    id_librarian SERIAL PRIMARY KEY,
+    name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL CHECK (email = LOWER(email))
 );
 
 -- tabela obra
-CREATE TABLE obra (
-    id_obra SERIAL PRIMARY KEY,
-    titulo VARCHAR(200) NOT NULL,
-    genero VARCHAR(50),
-    tipo VARCHAR(50),
-    ano INTEGER,
-    edicao INTEGER,
-	  autor VARCHAR(50)
+CREATE TABLE work (
+    id_work SERIAL PRIMARY KEY,
+    title VARCHAR(200) NOT NULL,
+    genre VARCHAR(50),
+    type VARCHAR(50),
+    year INTEGER,
+    edition INTEGER,
+	author VARCHAR(50)
 );
 
 -- tabela exemplar
-CREATE TABLE exemplar (
-    id_exemplar SERIAL PRIMARY KEY,
-    id_obra INTEGER NOT NULL,
+CREATE TABLE copy (
+    id_copy SERIAL PRIMARY KEY,
+    id_work INTEGER NOT NULL,
     status VARCHAR(20) DEFAULT 'disponivel',
         CHECK (status IN ('disponivel','emprestado')),
 
-    CONSTRAINT fk_obra
-        FOREIGN KEY (id_obra)
-        REFERENCES obra(id_obra)
+    CONSTRAINT fk_work
+        FOREIGN KEY (id_work)
+        REFERENCES work(id_work)
         ON DELETE CASCADE
 );
 
 -- tabela emprestimo
-CREATE TABLE emprestimo (
-    id_emprestimo SERIAL PRIMARY KEY,
-    id_usuario INTEGER NOT NULL,
-    id_exemplar INTEGER NOT NULL,
-    data_emprestimo DATE NOT NULL,
-    data_prevista_devolucao DATE NOT NULL,
-    data_devolucao DATE,
+CREATE TABLE loan (
+    id_loan SERIAL PRIMARY KEY,
+    id_user INTEGER NOT NULL,
+    id_copy INTEGER NOT NULL,
+    date_loan DATE NOT NULL,
+    date_return_expected DATE NOT NULL,
+    date_return DATE,
     status VARCHAR(20) DEFAULT 'ativo',
         CHECK (status IN ('ativo','devolvido','atrasado')),
 
-    CONSTRAINT fk_usuario
-        FOREIGN KEY (id_usuario)
-        REFERENCES usuario(id_usuario)
+    CONSTRAINT fk_user
+        FOREIGN KEY (id_user)
+        REFERENCES usuario(id_user)
         ON DELETE CASCADE,
 
-    CONSTRAINT fk_exemplar
-        FOREIGN KEY (id_exemplar)
-        REFERENCES exemplar(id_exemplar)
+    CONSTRAINT fk_copy
+        FOREIGN KEY (id_copy)
+        REFERENCES copy(id_copy)
         ON DELETE CASCADE
 );
 
 -- tabela reserva
-CREATE TABLE reserva (
-    id_reserva SERIAL PRIMARY KEY,
-    id_usuario INTEGER NOT NULL,
-    id_obra INTEGER NOT NULL,
-    data_reserva DATE NOT NULL DEFAULT CURRENT_DATE,
+CREATE TABLE reservation (
+    id_reservation SERIAL PRIMARY KEY,
+    id_user INTEGER NOT NULL,
+    id_work INTEGER NOT NULL,
+    date_reservation DATE NOT NULL DEFAULT CURRENT_DATE,
     status VARCHAR(20) DEFAULT 'ativa',
         CHECK (status IN ('ativa','cancelada', 'atendida' )),
 
-    CONSTRAINT fk_reserva_usuario
-        FOREIGN KEY (id_usuario)
-        REFERENCES usuario(id_usuario)
+    CONSTRAINT fk_reservation_usuer
+        FOREIGN KEY (id_user)
+        REFERENCES user(id_user)
         ON DELETE CASCADE,
 
-    CONSTRAINT fk_reserva_obra
-        FOREIGN KEY (id_obra)
-        REFERENCES obra(id_obra)
+    CONSTRAINT fk_reservation_work
+        FOREIGN KEY (id_work)
+        REFERENCES work(id_work)
         ON DELETE CASCADE
 );
 
-CREATE INDEX idx_obra_titulo ON obra(titulo);
+CREATE INDEX idx_work_title ON work(title);
 
-CREATE INDEX idx_obra_autor ON obra(autor);
+CREATE INDEX idx_work_author ON work(author);
 
-CREATE UNIQUE INDEX unique_emprestimo_ativo
-ON emprestimo (id_exemplar)
+CREATE UNIQUE INDEX unique_loan_active
+ON loan (id_copy)
 WHERE status = 'ativo';
 
-INSERT INTO usuario (nome, email, senha, status) VALUES
+INSERT INTO user (name, email, password, status) VALUES
 ('Bruno', 'bruno@email.com', 'bruno02', 'ativo'),
 ('Marcos', 'marcos@email.com', 'marcos03', 'suspenso');
 
-INSERT INTO bibliotecario (nome, email) VALUES
+INSERT INTO librarian (name, email) VALUES
 ('Ana Carolina', 'anacarolina@ufmg.com'),
 ('Paulo', 'paulo@ufmg.com');
 
-INSERT INTO obra (titulo, genero, tipo, autor) VALUES
+INSERT INTO work (title, genre, type, author) VALUES
 ('Dom Casmurro', 'Romance', 'Livro', 1889, 5, 'Machado de Assis'),
 ('O Pequeno Príncipe', 'Fantasia', 'Livro', 1943, 25, 'Antoine de Saint-Exupéry'),
 ('Cálculo I', 'Acadêmico', 'Livro', 2006, 5, 'James Stewart');
 
-INSERT INTO exemplar (id_obra, status) VALUES
+INSERT INTO copy (id_work, status) VALUES
 (1, 'disponivel'),
 (1, 'emprestado'),
 (2, 'disponivel'),
 (3, 'disponivel'),
 (3, 'disponivel');
 
-INSERT INTO emprestimo (
-    id_usuario,
-    id_exemplar,
-    data_emprestimo,
-    data_prevista_devolucao,
-    data_devolucao,
+INSERT INTO loan (
+    id_usuer,
+    id_copy,
+    date_loan,
+    date_return_expected,
+    date_return,
     status
 ) VALUES
 (1, 2, '2026-04-01', '2026-04-10', NULL, 'ativo'),
 (2, 1, '2026-03-20', '2026-03-30', '2026-03-29', 'devolvido');
 
-INSERT INTO reserva (id_usuario, id_obra, data_reserva, status) VALUES
+INSERT INTO reservation (id_user, id_work, date_reservation, status) VALUES
 (1, 2, '2026-04-10', 'ativa'),
 (2, 1, '2026-04-09', 'atendida');
