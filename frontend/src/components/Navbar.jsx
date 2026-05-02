@@ -10,8 +10,8 @@ export default function Navbar() {
       </div>
       <nav>
         <NavLink to="/" className={({ isActive }) => (isActive ? "active" : "")}>Home</NavLink>
-        <NavLink to="/dashboard" className={({ isActive }) => (isActive ? "active" : "")}>Meus Empréstimos</NavLink>
-        <NavLink to="/admin" className={({ isActive }) => (isActive ? "active" : "")}>Admin</NavLink>
+        <NavLink to="/login-user" className={({ isActive }) => (isActive ? "active" : "")}>User Login</NavLink>
+        <NavLink to="/login-adm" className={({ isActive }) => (isActive ? "active" : "")}>Admin Login</NavLink>
       </nav>
     </header>
   );

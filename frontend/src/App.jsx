@@ -3,6 +3,10 @@ import Navbar from "./components/Navbar";
 import Home from "./components/Home";
 import Dashboard from "./components/Dashboard";
 import AdminBooks from "./components/AdminBooks";
+import LoginAdm from "./pages/LoginAdm/LoginAdm";
+import LoginUser from "./pages/LoginAndRegisterUser/LoginUser";
+import AdmRegister from "./pages/RegisterAdm/AdmRegister";  
+
 
 const API_URL = "http://localhost:5173";
 const CURRENT_USER_ID = 1;
@@ -23,6 +27,18 @@ function App() {
             <Route
               path="/admin"
               element={<AdminBooks apiUrl={API_URL} librarianId={LIBRARIAN_USER_ID} />}
+            />
+            <Route
+              path="/login-adm"
+              element={<LoginAdm apiUrl={API_URL} librarianId={LIBRARIAN_USER_ID}/>}
+            />
+            <Route
+              path="/login-user"
+              element={<LoginUser apiUrl={API_URL} librarianId={LIBRARIAN_USER_ID}/>}
+            />
+            <Route
+              path="/register-adm"
+              element={<AdmRegister apiUrl={API_URL} librarianId={LIBRARIAN_USER_ID}/>}
             />
           </Routes>
         </main>

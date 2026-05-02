@@ -1,0 +1,91 @@
+.login-user-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 16px;
+  background: var(--bg);
+}
+
+.login-user-card {
+  width: min(100%, 420px);
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 24px;
+  box-shadow: 0 18px 40px rgba(15, 23, 42, 0.08);
+  padding: 36px 32px;
+}
+
+.login-user-card h1 {
+  margin: 0 0 10px;
+  font-size: 1.75rem;
+  color: var(--text);
+}
+
+.login-user-card p {
+  margin: 0 0 28px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.login-user-form {
+  display: grid;
+  gap: 18px;
+}
+
+.login-user-form label {
+  font-weight: 600;
+  color: var(--text);
+}
+
+.login-user-form input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: #ffffff;
+  color: var(--text);
+  font-size: 1rem;
+}
+
+.login-user-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.login-user-card button {
+  width: 100%;
+  border: none;
+  border-radius: 14px;
+  padding: 0.95rem 1rem;
+  background: var(--primary);
+  color: var(--primary-contrast);
+  font-weight: 700;
+  cursor: pointer;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.login-user-card button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.2);
+}
+
+.login-user-card > button {
+  margin-top: 16px;
+}
+
+.login-user-message {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 14px;
+  background: #eef2ff;
+  color: var(--primary);
+  border: 1px solid rgba(37, 99, 235, 0.15);
+}
+
+@media (max-width: 520px) {
+  .login-user-card {
+    padding: 28px 20px;
+  }
+}

@@ -1,0 +1,104 @@
+.login-adm-page {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 24px;
+}
+
+.login-adm-card {
+  width: 100%;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 40px 32px;
+  box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+}
+
+.login-adm-card h1 {
+  margin: 0 0 12px;
+  font-size: 1.75rem;
+  color: var(--text);
+}
+
+.login-adm-card p {
+  margin: 0 0 28px;
+  color: var(--muted);
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+
+.login-adm-form {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  margin-bottom: 20px;
+}
+
+.login-adm-form label {
+  display: block;
+  font-weight: 600;
+  color: var(--text);
+  margin-bottom: 4px;
+  font-size: 0.95rem;
+}
+
+.login-adm-form input {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 0.95rem 1rem;
+  font-size: 1rem;
+  background: #ffffff;
+  color: var(--text);
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-adm-form input:focus {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.12);
+}
+
+.login-adm-form button,
+.login-adm-card > button {
+  padding: 0.95rem 1.2rem;
+  border-radius: 999px;
+  border: none;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.login-adm-form button {
+  background: var(--primary);
+  color: var(--primary-contrast);
+}
+
+.login-adm-form button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 12px 20px rgba(37, 99, 235, 0.18);
+}
+
+.login-adm-card > button {
+  width: 100%;
+  background: #f3f4f6;
+  color: var(--text);
+  margin-bottom: 16px;
+}
+
+.login-adm-card > button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(15, 23, 42, 0.08);
+}
+
+.login-adm-message {
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: #f8fafc;
+  color: var(--muted);
+  font-size: 0.95rem;
+  text-align: center;
+}
