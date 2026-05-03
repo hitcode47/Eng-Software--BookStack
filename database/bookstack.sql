@@ -9,11 +9,11 @@ DROP TABLE IF EXISTS reservation CASCADE;
 DROP TABLE IF EXISTS loan CASCADE;
 DROP TABLE IF EXISTS copy CASCADE;
 DROP TABLE IF EXISTS work CASCADE;
-DROP TABLE IF EXISTS user CASCADE;
+DROP TABLE IF EXISTS users CASCADE;
 DROP TABLE IF EXISTS librarian CASCADE;
 
 -- tabela usuario
-CREATE TABLE user (
+CREATE TABLE users (
     id_user SERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
@@ -66,7 +66,7 @@ CREATE TABLE loan (
 
     CONSTRAINT fk_user
         FOREIGN KEY (id_user)
-        REFERENCES usuario(id_user)
+        REFERENCES users(id_user)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_copy
@@ -86,7 +86,7 @@ CREATE TABLE reservation (
 
     CONSTRAINT fk_reservation_usuer
         FOREIGN KEY (id_user)
-        REFERENCES user(id_user)
+        REFERENCES users(id_user)
         ON DELETE CASCADE,
 
     CONSTRAINT fk_reservation_work
@@ -102,38 +102,3 @@ CREATE INDEX idx_work_author ON work(author);
 CREATE UNIQUE INDEX unique_loan_active
 ON loan (id_copy)
 WHERE status = 'ativo';
-
-INSERT INTO user (name, email, password, status) VALUES
-('Bruno', 'bruno@email.com', 'bruno02', 'ativo'),
-('Marcos', 'marcos@email.com', 'marcos03', 'suspenso');
-
-INSERT INTO librarian (name, email) VALUES
-('Ana Carolina', 'anacarolina@ufmg.com'),
-('Paulo', 'paulo@ufmg.com');
-
-INSERT INTO work (title, genre, type, author) VALUES
-('Dom Casmurro', 'Romance', 'Livro', 1889, 5, 'Machado de Assis'),
-('O Pequeno Príncipe', 'Fantasia', 'Livro', 1943, 25, 'Antoine de Saint-Exupéry'),
-('Cálculo I', 'Acadêmico', 'Livro', 2006, 5, 'James Stewart');
-
-INSERT INTO copy (id_work, status) VALUES
-(1, 'disponivel'),
-(1, 'emprestado'),
-(2, 'disponivel'),
-(3, 'disponivel'),
-(3, 'disponivel');
-
-INSERT INTO loan (
-    id_usuer,
-    id_copy,
-    date_loan,
-    date_return_expected,
-    date_return,
-    status
-) VALUES
-(1, 2, '2026-04-01', '2026-04-10', NULL, 'ativo'),
-(2, 1, '2026-03-20', '2026-03-30', '2026-03-29', 'devolvido');
-
-INSERT INTO reservation (id_user, id_work, date_reservation, status) VALUES
-(1, 2, '2026-04-10', 'ativa'),
-(2, 1, '2026-04-09', 'atendida');
