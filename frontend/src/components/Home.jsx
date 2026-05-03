@@ -1,11 +1,18 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function Home({ apiUrl, userId }) {
+  const navigate = useNavigate();
   const [books, setBooks] = useState([]);
   const [query, setQuery] = useState("");
   const [loading, setLoading] = useState(false);
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+
+  function getCoverUrl(book) {
+    return book.cover || book.cover_url || book.image || book.coverImage || null;
+  }
 
   useEffect(() => {
     async function loadBooks() {
@@ -22,6 +29,48 @@ export default function Home({ apiUrl, userId }) {
       }
     }
 
+    const storedUser = localStorage.getItem('currentUser');
+    const token = localStorage.getItem('token');
+
+    async function loadCurrentUser() {
+      if (storedUser) {
+        try {
+          setCurrentUser(JSON.parse(storedUser));
+          return;
+        } catch (err) {
+          localStorage.removeItem('currentUser');
+        }
+      }
+
+      if (!token) {
+        
+        return;
+      }
+
+      try {
+        const response = await fetch(`${apiUrl}/api/auth/user`, {
+          headers: {
+            'Content-Type': 'application/json',
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('currentUser');
+          return;
+        }
+
+        const userData = await response.json();
+        setCurrentUser(userData);
+        localStorage.setItem('currentUser', JSON.stringify(userData));
+      } catch (err) {
+        localStorage.removeItem('token');
+        localStorage.removeItem('currentUser');
+      }
+    }
+
+    loadCurrentUser();
     loadBooks();
   }, [apiUrl]);
 
@@ -34,22 +83,43 @@ export default function Home({ apiUrl, userId }) {
     );
   });
 
+  const isLoggedIn = Boolean(localStorage.getItem('token') && currentUser);
+
   async function handleLoan(bookId) {
     setError(null);
     setMessage(null);
+
+    const token = localStorage.getItem('token');
+    if (!token || !currentUser) {
+      setError("Você precisa estar logado para pegar um livro emprestado.");
+      navigate('/login-user');
+      return;
+    }
+
     try {
-      const response = await fetch(`${apiUrl}/loans`, {
+      const response = await fetch(`${apiUrl}/api/loan-requests`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ user_id: userId, book_id: bookId }),
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,
+        },
+        body: JSON.stringify({ book_id: bookId }),
       });
+
       const result = await response.json();
       if (!response.ok) {
-        setError(result.error || "Não foi possível efetuar o empréstimo.");
+        if (response.status === 401) {
+          localStorage.removeItem('token');
+          localStorage.removeItem('currentUser');
+          setError("Sua sessão expirou. Faça login novamente.");
+          navigate('/login-user');
+          return;
+        }
+        setError(result.error || "Não foi possível enviar a solicitação de empréstimo.");
         return;
       }
 
-      setMessage(`Livro emprestado com sucesso! Empréstimo #${result.id}`);
+      setMessage("Solicitação enviada com sucesso. Aguarde aprovação do administrador.");
       setBooks((prev) =>
         prev.map((book) =>
           book.id === bookId
@@ -85,22 +155,68 @@ export default function Home({ apiUrl, userId }) {
         ) : filteredBooks.length === 0 ? (
           <div className="card">Nenhum livro encontrado.</div>
         ) : (
-          filteredBooks.map((book) => (
-            <div key={book.id} className="card">
-              <h2>{book.title}</h2>
-              <p className="small-text">Autor: {book.author}</p>
-              <p className="small-text">Ano: {book.year}</p>
-              <p className="small-text">Disponíveis: {book.quantity_available}</p>
-              <button
-                className="button"
-                disabled={book.quantity_available <= 0}
-                onClick={() => handleLoan(book.id)}
-                style={{ marginTop: "18px" }}
-              >
-                Pegar Emprestado
-              </button>
-            </div>
-          ))
+          filteredBooks.map((book) => {
+            const coverUrl = getCoverUrl(book);
+            return (
+              <div key={book.id} className="card">
+                <div
+                  style={{
+                    display: "flex",
+                    gap: "18px",
+                    alignItems: "flex-start",
+                  }}
+                >
+                  {coverUrl ? (
+                    <img
+                      src={coverUrl}
+                      alt={`Capa de ${book.title}`}
+                      style={{
+                        width: "120px",
+                        height: "180px",
+                        objectFit: "cover",
+                        borderRadius: "4px",
+                        flexShrink: 0,
+                      }}
+                    />
+                  ) : (
+                    <div
+                      style={{
+                        width: "120px",
+                        height: "180px",
+                        background: "#f5f5f5",
+                        display: "flex",
+                        alignItems: "center",
+                        justifyContent: "center",
+                        color: "#666",
+                        borderRadius: "4px",
+                        flexShrink: 0,
+                      }}
+                    >
+                      Sem capa
+                    </div>
+                  )}
+                  <div style={{ flex: 1 }}>
+                    <h2>{book.title}</h2>
+                    <p className="small-text">Autor: {book.author}</p>
+                    <p className="small-text">Ano: {book.year}</p>
+                    <p className="small-text">Disponíveis: {book.quantity}</p>
+                    <button
+                      className={`button ${book.quantity <= 0 ? "button-disabled" : ""}`}
+                      disabled={book.quantity <= 0}
+                      onClick={() => handleLoan(book.id)}
+                      style={{ marginTop: "18px" }}
+                    >
+                      {book.quantity <= 0
+                        ? "Indisponível"
+                        : !isLoggedIn
+                        ? "Faça login para pegar emprestado"
+                        : "Pegar Emprestado"}
+                    </button>
+                  </div>
+                </div>
+              </div>
+            );
+          })
         )}
       </div>
     </section>

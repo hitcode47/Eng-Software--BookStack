@@ -14,8 +14,9 @@ function getCoverUrl(book) {
   return book.cover || book.cover_url || book.image || book.coverImage || null;
 }
 
-export default function Dashboard({ apiUrl }) {
+export default function Dashboard({ userId }) {
   const navigate = useNavigate();
+  const apiUrl = 'http://localhost:5000/api';
   const [loanBooks, setLoanBooks] = useState([]);
   const [books, setBooks] = useState([]);
   const [query, setQuery] = useState("");
@@ -23,96 +24,6 @@ export default function Dashboard({ apiUrl }) {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
-  const [loanRequests, setLoanRequests] = useState([]);
-
-const loadLoanBooks = async () => {
-  setLoading(true);
-  setError(null);
-
-  try {
-    const token = localStorage.getItem("token");
-
-    const loansResponse = await fetch(`${apiUrl}/api/users/me/loans`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!loansResponse.ok) {
-      throw new Error("Erro ao buscar empréstimos");
-    }
-
-    const loans = await loansResponse.json();
-
-    const loanBooksPromises = loans.map(async (loan) => {
-      const bookResponse = await fetch(`${apiUrl}/api/books/${loan.book_id}`);
-      const book = await bookResponse.json();
-
-      return { ...loan, book };
-    });
-
-    const loanBooksData = await Promise.all(loanBooksPromises);
-    setLoanBooks(loanBooksData);
-
-  } catch (err) {
-    console.error("Erro detalhado:", err);
-    setError("Erro ao carregar seus empréstimos.");
-  } finally {
-    setLoading(false);
-  }
-};
-
-const fetchLoanRequests = async () => {
-  try {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(`${apiUrl}/api/users/me/loan-requests`, {
-      headers: {
-        Authorization: `Bearer ${token}`,
-      },
-    });
-
-    if (!response.ok) {
-      throw new Error("Erro ao buscar solicitações");
-    }
-
-    const data = await response.json();
-    setLoanRequests(data);
-
-  } catch (err) {
-    console.error("Erro ao carregar solicitações:", err);
-  }
-};
-
-
-async function handleRenew(loanId) {
-  try {
-    const token = localStorage.getItem("token");
-
-    const response = await fetch(
-      `${apiUrl}/api/loans/${loanId}/renew`,
-      {
-        method: "PUT",
-        headers: {
-          Authorization: `Bearer ${token}`,
-        },
-      }
-    );
-
-    const result = await response.json();
-
-    if (!response.ok) {
-      setError(result.message);
-      return;
-    }
-
-    setMessage(result.message);
-    await loadLoanBooks();
-
-  } catch {
-    setError("Erro ao renovar empréstimo.");
-  }
-}
 
   useEffect(() => {
     async function fetchUserData() {
@@ -139,15 +50,45 @@ async function handleRenew(loanId) {
         setCurrentUser(userData);
         localStorage.setItem('currentUser', JSON.stringify(userData));
 
-        await loadLoanBooks();
-        await fetchLoanRequests();
-
+        await loadLoanBooks(userData.id);
       } catch (err) {
         console.error('Erro ao buscar dados do usuário:', err);
         setError('Erro ao carregar dados do usuário.');
         localStorage.removeItem('token');
         localStorage.removeItem('currentUser');
         navigate('/login-user');
+      }
+    }
+
+    async function loadLoanBooks(currentUserId) {
+      setLoading(true);
+      setError(null);
+      try {
+        const token = localStorage.getItem('token');
+        const loansResponse = await fetch(`${apiUrl}/users/${currentUserId}/loans`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+        
+        if (!loansResponse.ok) {
+          throw new Error('Erro ao carregar empréstimos');
+        }
+        
+        const loansData = await loansResponse.json();
+        const loans = Array.isArray(loansData) ? loansData : [];
+        const loanBooksPromises = loans.map(async (loan) => {
+          const bookResponse = await fetch(`${apiUrl}/books/${loan.book_id}`);
+          const book = await bookResponse.json();
+          return { ...loan, book };
+        });
+        const loanBooksData = await Promise.all(loanBooksPromises);
+        setLoanBooks(loanBooksData);
+      } catch (err) {
+        console.error("Erro ao carregar empréstimos:", err);
+        setError("Erro ao carregar seus empréstimos.");
+      } finally {
+        setLoading(false);
       }
     }
 
@@ -163,7 +104,7 @@ async function handleRenew(loanId) {
 
     fetchUserData();
     loadBooks();
-  }, [apiUrl, navigate]);
+  }, [navigate]);
 
   const filteredBooks = books.filter((book) => {
     const term = query.toLowerCase();
@@ -174,33 +115,27 @@ async function handleRenew(loanId) {
     );
   });
 
-  async function handleRequestLoan(bookId) {
+  async function handleLoan(bookId) {
     setError(null);
     setMessage(null);
 
     const token = localStorage.getItem('token');
     if (!token) {
-      setError("Você precisa estar logado para solicitar um livro emprestado.");
+      setError("Você precisa estar logado para pegar um livro emprestado.");
       navigate('/login-user');
       return;
     }
 
-    if (!currentUser) {
-      setError("Usuário não autenticado.");
-      return;
-    }
-
     try {
-      const response = await fetch(`${apiUrl}/api/loan-requests`, {
+      const response = await fetch(`${apiUrl}/loans`, {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
           "Authorization": `Bearer ${token}`
         },
-        body: JSON.stringify({ book_id: bookId }),
+        body: JSON.stringify({ user_id: userId, book_id: bookId }),
       });
       const result = await response.json();
-      console.log('Loan request response:', result);
       if (!response.ok) {
         if (response.status === 401) {
           localStorage.removeItem('token');
@@ -209,13 +144,21 @@ async function handleRenew(loanId) {
           navigate('/login-user');
           return;
         }
-        setError(result.error || "Não foi possível enviar a solicitação.");
+        setError(result.error || "Não foi possível efetuar o empréstimo.");
         return;
       }
 
-      setMessage("Solicitação enviada ao administrador para aprovação.");
-      await fetchLoanRequests();
+      setMessage(`Livro emprestado com sucesso! Empréstimo #${result.id}`);
+      setBooks((prev) =>
+        prev.map((book) =>
+          book.id === bookId
+            ? { ...book, quantity_available: book.quantity_available - 1 }
+            : book
+        )
+      );
+      setLoanBooks((prev) => [...prev, { ...result, book: books.find(b => b.id === bookId) }]);
     } catch (err) {
+      console.error("Erro ao emprestar livro:", err);
       setError("Erro na comunicação com o servidor.");
     }
   }
@@ -224,17 +167,22 @@ async function handleRenew(loanId) {
     setError(null);
     setMessage(null);
     try {
+      const token = localStorage.getItem('token');
       const response = await fetch(`${apiUrl}/loans/${loanId}/return`, {
         method: "PUT",
+        headers: {
+          "Authorization": `Bearer ${token}`
+        }
       });
       const result = await response.json();
       if (!response.ok) {
-        setError(result.error || "Falha ao devolver o livro.");
+        setError(result.message || "Falha ao devolver o livro.");
         return;
       }
       setMessage("Livro devolvido com sucesso.");
       setLoanBooks((prev) => prev.filter((loanBook) => loanBook.id !== loanId));
     } catch (err) {
+      console.error("Erro ao devolver livro:", err);
       setError("Erro na comunicação com o servidor.");
     }
   }
@@ -245,7 +193,15 @@ async function handleRenew(loanId) {
     navigate('/');
   }
 
-  const activeLoanBooks = loanBooks;
+  const activeLoanBooks = loanBooks.map((loanBook) => {
+    const loanDate = new Date(loanBook.loan_date);
+    const dueDate = new Date(loanDate);
+    dueDate.setDate(dueDate.getDate() + 14);
+    return {
+      ...loanBook,
+      dueDate: dueDate.toISOString(),
+    };
+  });
 
   return (
     <section>
@@ -323,14 +279,14 @@ async function handleRenew(loanId) {
                   <h2>{book.title}</h2>
                   <p className="small-text">Autor: {book.author}</p>
                   <p className="small-text">Ano: {book.year}</p>
-                  <p className="small-text">Disponíveis: {book.quantity}</p>
+                  <p className="small-text">Disponíveis: {book.quantity_available}</p>
                   <button
                     className="button"
                     disabled={book.quantity_available <= 0}
-                    onClick={() => handleRequestLoan(book.id)}
+                    onClick={() => handleLoan(book.id)}
                     style={{ marginTop: "18px" }}
                   >
-                    Solicitar Empréstimo
+                    Pegar Emprestado
                   </button>
                 </div>
               </div>
@@ -339,40 +295,7 @@ async function handleRenew(loanId) {
         )}
       </div>
 
-      <div className="card" style={{ marginTop: "24px" }}>      
-        <div className="card" style={{ marginTop: "24px" }}>
-          <h2 className="section-heading">Suas solicitações</h2>
-
-          {loanRequests.length === 0 ? (
-            <p>Nenhuma solicitação realizada.</p>
-          ) : (
-            loanRequests.map((request) => (
-              <div
-                key={request.id}
-                className="card"
-                style={{ marginTop: "16px" }}
-              >
-                <p>
-                  <strong>{request.book_title}</strong>
-                </p>
-            
-                <p className="small-text">
-                  Status: {
-                    request.status === "pending"
-                      ? "Aguardando aprovação"
-                      : request.status === "approved"
-                      ? "Aprovado"
-                      : "Recusado"
-                  }
-                </p>
-                
-                <p className="small-text">
-                  Solicitado em: {formatDate(request.request_date)}
-                </p>
-              </div>
-            ))
-          )}
-        </div>
+      <div className="card" style={{ marginTop: "24px" }}>
         <h2 className="section-heading">Seus empréstimos ativos</h2>
       </div>
 
@@ -384,60 +307,46 @@ async function handleRenew(loanId) {
         activeLoanBooks.map((loanBook) => {
           const coverUrl = getCoverUrl(loanBook.book);
           return (
-            <div
-              key={loanBook.id}
-              className="loan-item"
-              style={{ display: "flex", gap: "16px", alignItems: "flex-start" }}
-            >
-              {coverUrl ? (
-                <img
-                  src={coverUrl}
-                  alt={`Capa de ${loanBook.book.title}`}
-                  style={{
-                    width: "120px",
-                    height: "160px",
-                    objectFit: "cover",
-                    borderRadius: "4px",
-                    flexShrink: 0,
-                  }}
-                />
-              ) : (
-                <div
-                  style={{
-                    width: "120px",
-                    height: "160px",
-                    background: "#f5f5f5",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    color: "#666",
-                    borderRadius: "4px",
-                    flexShrink: 0,
-                  }}
-                >
-                  Sem capa
-                </div>
-              )}
-              <div style={{ flex: 1 }}>
+            <div key={loanBook.id} className="loan-item">
+              <div>
+                {coverUrl ? (
+                  <img
+                    src={coverUrl}
+                    alt={`Capa de ${loanBook.book.title}`}
+                    style={{
+                      width: "100%",
+                      height: "auto",
+                      objectFit: "cover",
+                      marginBottom: "12px",
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "100%",
+                      minHeight: "180px",
+                      background: "#f5f5f5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#666",
+                      marginBottom: "12px",
+                    }}
+                  >
+                    Sem capa
+                  </div>
+                )}
                 <p>
                   <strong>{loanBook.book.title}</strong>
                 </p>
                 <p className="small-text">Autor: {loanBook.book.author}</p>
                 <p className="small-text">Ano: {loanBook.book.year}</p>
                 <p className="small-text">Emprestado em: {formatDate(loanBook.loan_date)}</p>
-                <p className="small-text">Prazo previsto: {loanBook.due_date ? formatDate(loanBook.due_date) : "Não definido"}</p>
-                <p className="small-text">Renovações: {loanBook.renewals ?? 0}/5</p>
-                <button
-                  className="button"
-                  onClick={() => handleRenew(loanBook.id)}
-                  disabled={loanBook.renewals >= 5}
-                  style={{ marginTop: "12px" }}
-                >
-                  {loanBook.renewals >= 5
-                    ? "Limite atingido"
-                    : "Renovar por +15 dias"}
-                </button>
+                <p className="small-text">Prazo previsto: {formatDate(loanBook.dueDate)}</p>
               </div>
+              <button className="button button-secondary" onClick={() => handleReturn(loanBook.id)}>
+                Devolver
+              </button>
             </div>
           );
         })

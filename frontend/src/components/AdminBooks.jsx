@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 
 export default function AdminBooks({ apiUrl, librarianId }) {
   const [title, setTitle] = useState("");
@@ -8,18 +9,165 @@ export default function AdminBooks({ apiUrl, librarianId }) {
   const [message, setMessage] = useState(null);
   const [error, setError] = useState(null);
   const [stockBooks, setStockBooks] = useState([]);
-  const [loanedBooks, setLoanedBooks] = useState([
-    {
-      id: 101,
-      title: "Dom Casmurro",
-      author: "Machado de Assis",
-      year: 1899,
-      borrowerName: "João Silva",
-      loanDate: "2026-04-10",
-      returnDate: "2026-04-24",
-    },
-  ]);
-  const [loanDetails, setLoanDetails] = useState({});
+  const [loanedBooks, setLoanedBooks] = useState([]);
+  const [pendingRequests, setPendingRequests] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const navigate = useNavigate();
+  const [currentAdmin, setCurrentAdmin] = useState(null);
+
+  function getCoverUrl(book) {
+    return book.cover || book.cover_url || book.image || book.coverImage || null;
+  }
+
+useEffect(() => {
+  fetchAdminData();
+}, []);
+
+if (!currentAdmin) {
+  return <div className="card">Carregando painel administrativo...</div>;
+}
+
+async function fetchAdminData() {
+  try {
+    const token = localStorage.getItem("adminToken");
+
+    if (!token) {
+      navigate("/login-adm");
+      return;
+    }
+
+    const response = await fetch(`${apiUrl}/api/admin/perfil`, {
+      headers: {
+        Authorization: `Bearer ${token}`,
+      },
+    });
+
+    if (!response.ok) {
+      throw new Error("Sessão inválida");
+    }
+
+    const adminData = await response.json();
+
+    setCurrentAdmin(adminData);
+
+    await fetchBooks();
+    await fetchLoans();
+    await fetchPendingRequests();
+
+  } catch (err) {
+    console.error("Erro ao validar admin:", err);
+
+    localStorage.removeItem("adminToken");
+    navigate("/login-admin");
+  }
+}
+
+  async function fetchBooks() {
+    try {
+      const response = await fetch(`${apiUrl}/books`);
+      if (!response.ok) throw new Error("Erro ao buscar livros");
+      const books = await response.json();
+      setStockBooks(books);
+    } catch (err) {
+      console.error("Erro ao buscar livros:", err);
+    }
+  }
+
+  async function fetchLoans() {
+    try {
+      const response = await fetch(`${apiUrl}/loans`);
+      if (!response.ok) throw new Error("Erro ao buscar empréstimos");
+      const loans = await response.json();
+      setLoanedBooks(loans);
+    } catch (err) {
+      console.error("Erro ao buscar empréstimos:", err);
+    }
+  }
+
+  async function fetchPendingRequests() {
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(`${apiUrl}/api/admin/loan-requests`, {
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      });
+      if (!response.ok) throw new Error("Erro ao buscar solicitações pendentes");
+      const requests = await response.json();
+      setPendingRequests(requests);
+    } catch (err) {
+      console.error("Erro ao buscar solicitações pendentes:", err);
+    }
+  }
+
+  async function approveRequest(requestId) {
+    setError(null);
+    setMessage(null);
+    setLoading(true);
+
+    try {
+      const token = localStorage.getItem('adminToken');
+      const response = await fetch(
+        `${apiUrl}/api/admin/loan-requests/${requestId}/approve`,
+        {
+          method: "PUT",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        }
+      );
+
+      const result = await response.json();
+      if (!response.ok) {
+        throw new Error(result.error || result.mensagem || "Erro ao aprovar solicitação.");
+      }
+
+      setMessage("Solicitação aprovada com sucesso.");
+      await fetchPendingRequests();
+      await fetchBooks();
+      await fetchLoans();
+    } catch (err) {
+      console.error("Erro ao aprovar solicitação:", err);
+      setError(err.message || "Erro ao aprovar solicitação.");
+    } finally {
+      setLoading(false);
+    }
+  }
+
+async function rejectRequest(requestId) {
+  setError(null);
+  setMessage(null);
+  setLoading(true);
+
+  try {
+    const token = localStorage.getItem("adminToken");
+
+    const response = await fetch(
+      `${apiUrl}/api/admin/loan-requests/${requestId}/reject`,
+      {
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
+
+    const result = await response.json();
+
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao recusar solicitação.");
+    }
+
+    setMessage("Solicitação recusada com sucesso.");
+    await fetchPendingRequests();
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
+  }
+}
 
   async function handleSubmit(event) {
     event.preventDefault();
@@ -31,12 +179,12 @@ export default function AdminBooks({ apiUrl, librarianId }) {
       return;
     }
 
+    setLoading(true);
     try {
       const response = await fetch(`${apiUrl}/books`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-User-Id": String(librarianId),
         },
         body: JSON.stringify({
           title,
@@ -52,11 +200,11 @@ export default function AdminBooks({ apiUrl, librarianId }) {
       }
 
       const newBook = {
-        id: result.id || Date.now(),
-        title: result.title || title,
-        author: result.author || author,
-        year: result.year || Number(year),
-        quantity: result.quantity_available || Number(quantity),
+        id: result.id,
+        title: result.title,
+        author: result.author,
+        year: result.year,
+        quantity: result.quantity_available,
       };
 
       setStockBooks((prev) => [...prev, newBook]);
@@ -67,90 +215,50 @@ export default function AdminBooks({ apiUrl, librarianId }) {
       setMessage(`Livro "${newBook.title}" cadastrado com sucesso.`);
     } catch (err) {
       setError("Erro ao enviar dados para o servidor.");
+    } finally {
+      setLoading(false);
     }
   }
 
-  function handleLoanInputChange(bookId, field, value) {
-    setLoanDetails((prev) => ({
-      ...prev,
-      [bookId]: {
-        ...prev[bookId],
-        [field]: value,
-      },
-    }));
-  }
 
-  function handleLoan(bookId) {
-    const details = loanDetails[bookId] || {};
-    if (!details.borrowerName || !details.loanDate || !details.returnDate) {
-      setError("Preencha os dados do empréstimo antes de emprestar.");
-      setMessage(null);
-      return;
-    }
+ async function handleReturn(loanId) {
+  setLoading(true);
 
-    const book = stockBooks.find((item) => item.id === bookId);
-    if (!book || book.quantity <= 0) {
-      setError("Livro não encontrado ou sem estoque.");
-      return;
-    }
+  try {
+    const token = localStorage.getItem("adminToken");
 
-    setLoanedBooks((prev) => [
-      ...prev,
+    const response = await fetch(
+      `${apiUrl}/api/admin/loans/${loanId}/return`,
       {
-        id: book.id,
-        title: book.title,
-        author: book.author,
-        year: book.year,
-        borrowerName: details.borrowerName,
-        loanDate: details.loanDate,
-        returnDate: details.returnDate,
-      },
-    ]);
+        method: "PUT",
+        headers: {
+          Authorization: `Bearer ${token}`,
+        },
+      }
+    );
 
-    setStockBooks((prev) => prev.map((item) =>
-      item.id === bookId ? { ...item, quantity: item.quantity - 1 } : item
-    ).filter((item) => item.quantity > 0));
-    setLoanDetails((prev) => {
-      const next = { ...prev };
-      delete next[bookId];
-      return next;
-    });
-    setError(null);
-    setMessage(`Livro "${book.title}" emprestado para ${details.borrowerName}.`);
-  }
+    const result = await response.json();
 
-  function handleReturn(bookId) {
-    const loanedBook = loanedBooks.find((item) => item.id === bookId);
-    if (!loanedBook) {
-      setError("Livro emprestado não encontrado.");
-      return;
+    if (!response.ok) {
+      throw new Error(result.error || "Erro ao devolver livro");
     }
 
-    setLoanedBooks((prev) => prev.filter((item) => item.id !== bookId));
-    setStockBooks((prev) => {
-      const existing = prev.find((item) => item.id === loanedBook.id);
-      if (existing) {
-        return prev.map((item) =>
-          item.id === loanedBook.id ? { ...item, quantity: item.quantity + 1 } : item
-        );
-      } else {
-        return [...prev, {
-          id: loanedBook.id,
-          title: loanedBook.title,
-          author: loanedBook.author,
-          year: loanedBook.year,
-          quantity: 1,
-        }];
-      }
-    });
-    setError(null);
-    setMessage(`Livro "${loanedBook.title}" devolvido e voltou ao estoque.`);
+    setMessage("Livro devolvido com sucesso.");
+
+    await fetchLoans();
+    await fetchBooks();
+
+  } catch (err) {
+    setError(err.message);
+  } finally {
+    setLoading(false);
   }
+}
 
   return (
     <section>
       <div className="card">
-        <h1 className="section-heading">Livros Emprestados</h1>
+        <h1 className="section-heading">Bem-vindo, {currentAdmin?.name}</h1>
         <p className="page-subtitle">
           Adicione um novo livro ao acervo usando o formulário abaixo.
         </p>
@@ -168,6 +276,7 @@ export default function AdminBooks({ apiUrl, librarianId }) {
               value={title}
               onChange={(event) => setTitle(event.target.value)}
               placeholder="Nome do livro"
+              disabled={loading}
             />
           </label>
 
@@ -178,10 +287,18 @@ export default function AdminBooks({ apiUrl, librarianId }) {
               value={author}
               onChange={(event) => setAuthor(event.target.value)}
               placeholder="Nome do autor"
+              disabled={loading}
             />
           </label>
 
-          <div style={{ display: "grid", gap: "16px", marginTop: "16px", gridTemplateColumns: "1fr 1fr" }}>
+          <div
+            style={{
+              display: "grid",
+              gap: "16px",
+              marginTop: "16px",
+              gridTemplateColumns: "1fr 1fr",
+            }}
+          >
             <label>
               Ano
               <input
@@ -190,6 +307,7 @@ export default function AdminBooks({ apiUrl, librarianId }) {
                 value={year}
                 onChange={(event) => setYear(event.target.value)}
                 placeholder="2025"
+                disabled={loading}
               />
             </label>
             <label>
@@ -200,12 +318,18 @@ export default function AdminBooks({ apiUrl, librarianId }) {
                 min="1"
                 value={quantity}
                 onChange={(event) => setQuantity(Number(event.target.value))}
+                disabled={loading}
               />
             </label>
           </div>
 
-          <button type="submit" className="button" style={{ marginTop: "20px" }}>
-            Adicionar livro
+          <button
+            type="submit"
+            className="button"
+            style={{ marginTop: "20px" }}
+            disabled={loading}
+          >
+            {loading ? "Adicionando..." : "Adicionar livro"}
           </button>
         </form>
       </div>
@@ -216,60 +340,92 @@ export default function AdminBooks({ apiUrl, librarianId }) {
           <p>Nenhum livro em estoque.</p>
         ) : (
           stockBooks.map((book) => {
-            const details = loanDetails[book.id] || {
-              borrowerName: "",
-              loanDate: "",
-              returnDate: "",
-            };
+            const coverUrl = getCoverUrl(book);
             return (
-              <div key={book.id} className="card" style={{ marginBottom: "16px" }}>
-                <p><strong>ID:</strong> {book.id}</p>
-                <p><strong>Nome do livro:</strong> {book.title}</p>
-                <p><strong>Autor:</strong> {book.author}</p>
-                <p><strong>Ano:</strong> {book.year}</p>
-                <p><strong>Quantidade:</strong> {book.quantity}</p>
-
-                <div style={{ display: "grid", gap: "12px", marginTop: "12px", gridTemplateColumns: "1fr" }}>
-                  <label>
-                    Quem pegou
-                    <input
-                      className="input"
-                      value={details.borrowerName}
-                      onChange={(event) => handleLoanInputChange(book.id, "borrowerName", event.target.value)}
-                      placeholder="Nome do leitor"
-                    />
-                  </label>
-                  <label>
-                    Data de empréstimo
-                    <input
-                      className="input"
-                      type="date"
-                      value={details.loanDate}
-                      onChange={(event) => handleLoanInputChange(book.id, "loanDate", event.target.value)}
-                    />
-                  </label>
-                  <label>
-                    Data de devolução
-                    <input
-                      className="input"
-                      type="date"
-                      value={details.returnDate}
-                      onChange={(event) => handleLoanInputChange(book.id, "returnDate", event.target.value)}
-                    />
-                  </label>
+              <div
+                key={book.id}
+                className="card"
+                style={{ marginBottom: "16px", display: "flex", gap: "16px", alignItems: "flex-start" }}
+              >
+                {coverUrl ? (
+                  <img
+                    src={coverUrl}
+                    alt={`Capa de ${book.title}`}
+                    style={{
+                      width: "120px",
+                      height: "160px",
+                      objectFit: "cover",
+                      borderRadius: "4px",
+                      flexShrink: 0,
+                    }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      width: "120px",
+                      height: "160px",
+                      background: "#f5f5f5",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                      color: "#666",
+                      borderRadius: "4px",
+                      flexShrink: 0,
+                    }}
+                  >
+                    Sem capa
+                  </div>
+                )}
+                <div style={{ flex: 1 }}>
+                  <p>
+                    <strong>ID:</strong> {book.id}
+                  </p>
+                  <p>
+                    <strong>Nome do livro:</strong> {book.title}
+                  </p>
+                  <p>
+                    <strong>Autor:</strong> {book.author}
+                  </p>
+                  <p>
+                    <strong>Ano:</strong> {book.year}
+                  </p>
+                  <p>
+                    <strong>Quantidade:</strong> {book.quantity}
+                  </p>
                 </div>
-
-                <button
-                  type="button"
-                  className="button"
-                  style={{ marginTop: "12px" }}
-                  onClick={() => handleLoan(book.id)}
-                >
-                  Emprestar
-                </button>
               </div>
             );
           })
+        )}
+      </div>
+
+      <div className="card" style={{ marginTop: "24px" }}>
+        <h2>Solicitações Pendentes</h2>
+        {pendingRequests.length === 0 ? (
+          <p>Nenhuma solicitação pendente.</p>
+        ) : (
+          pendingRequests.map((request) => (
+            <div key={request.request_id} className="card" style={{ marginBottom: "16px" }}>
+              <p>
+                <strong>Usuário:</strong> {request.user_name}
+              </p>
+              <p>
+                <strong>Livro:</strong> {request.book_title}
+              </p>
+              <p>
+                <strong>Data da solicitação:</strong> {request.request_date}
+              </p>
+              <button
+                type="button"
+                className="button"
+                style={{ marginTop: "12px" }}
+                onClick={() => approveRequest(request.request_id)}
+                disabled={loading}
+              >
+                {loading ? "Processando..." : "Aprovar empréstimo"}
+              </button>
+            </div>
+          ))
         )}
       </div>
 
@@ -280,18 +436,32 @@ export default function AdminBooks({ apiUrl, librarianId }) {
         ) : (
           loanedBooks.map((item) => (
             <div key={item.id} className="card" style={{ marginBottom: "16px" }}>
-              <p><strong>ID:</strong> {item.id}</p>
-              <p><strong>Nome do livro:</strong> {item.title}</p>
-              <p><strong>Quem pegou:</strong> {item.borrowerName}</p>
-              <p><strong>Data de empréstimo:</strong> {item.loanDate}</p>
-              <p><strong>Data de devolução:</strong> {item.returnDate}</p>
+              <p>
+                <strong>ID:</strong> {item.id}
+              </p>
+              <p>
+                <strong>Nome do livro:</strong> {item.title}
+              </p>
+              <p>
+                <strong>Autor:</strong> {item.author}
+              </p>
+              <p>
+                <strong>Quem pegou:</strong> {item.borrowerName}
+              </p>
+              <p>
+                <strong>Data de empréstimo:</strong> {new Date(item.loanDate).toLocaleDateString("pt-BR")}
+              </p>
+              <p>
+                <strong>Prazo previsto:</strong> {new Date(item.dueDate).toLocaleDateString("pt-BR")}
+              </p>
               <button
                 type="button"
                 className="button"
                 style={{ marginTop: "12px" }}
                 onClick={() => handleReturn(item.id)}
+                disabled={loading}
               >
-                Marcar como devolvido
+                {loading ? "Processando..." : "Marcar como devolvido"}
               </button>
             </div>
           ))
@@ -300,3 +470,4 @@ export default function AdminBooks({ apiUrl, librarianId }) {
     </section>
   );
 }
+ 
