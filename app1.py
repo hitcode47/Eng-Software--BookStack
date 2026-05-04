@@ -1,7 +1,7 @@
 from flask import Flask, request, jsonify
 from flask_cors import CORS
 import sqlite3
-import hashlib
+from werkzeug.security import generate_password_hash, check_password_hash
 import secrets
 from functools import wraps
 from datetime import datetime, timedelta
@@ -131,12 +131,12 @@ def init_books_db():
 # ==================== UTILITY FUNCTIONS ====================
 
 def hash_password(password):
-    """Hash password using SHA-256"""
-    return hashlib.sha256(password.encode()).hexdigest()
+    """Hash password using Werkzeug security"""
+    return generate_password_hash(password)
 
 def verify_password(password, password_hash):
     """Verify password against hash"""
-    return hash_password(password) == password_hash
+    return check_password_hash(password_hash, password)
 
 def generate_session_token():
     """Generate a secure session token"""
@@ -500,7 +500,7 @@ def admin_login():
         
         admin_id, login_db, senha_hash, chave_db, name, email = admin
         
-        if hash_password(senha) != senha_hash:
+        if not check_password_hash(senha_hash, senha):
             return jsonify({'mensagem': 'Login ou senha incorretos.'}), 401
         
         if chave != chave_db:
