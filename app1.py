@@ -246,38 +246,17 @@ def register():
         data = request.get_json()
         
         if not data or not all(k in data for k in ('name', 'email', 'password')):
-            return jsonify({
-                'success': False,
-                'message': 'Campos obrigatórios: nome, email e senha'
-            }), 400
+            return jsonify({'message': 'Nome, email e senha são obrigatórios'}), 400
         
         name = data['name'].strip()
         email = data['email'].strip().lower()
         password = data['password']
         
-        if not name:
-            return jsonify({
-                'success': False,
-                'message': 'Nome não pode estar vazio'
-            }), 400
-        
-        if len(name) > 100:
-            return jsonify({
-                'success': False,
-                'message': 'Nome não pode exceder 100 caracteres'
-            }), 400
-        
         if len(password) < 6:
-            return jsonify({
-                'success': False,
-                'message': 'Senha deve ter no mínimo 6 caracteres'
-            }), 400
+            return jsonify({'message': 'Senha deve ter no mínimo 6 caracteres'}), 400
         
-        if len(password) > 128:
-            return jsonify({
-                'success': False,
-                'message': 'Senha não pode exceder 128 caracteres'
-            }), 400
+        if not name:
+            return jsonify({'message': 'Nome não pode estar vazio'}), 400
         
         password_hash = hash_password(password)
         
@@ -290,22 +269,15 @@ def register():
             conn.close()
             
             return jsonify({
-                'success': True,
                 'message': 'Usuário registrado com sucesso',
                 'email': email
             }), 201
         
         except sqlite3.IntegrityError:
-            return jsonify({
-                'success': False,
-                'message': 'Este email já está registrado. Por favor, use outro email ou faça login.'
-            }), 409
+            return jsonify({'message': 'Email já está registrado'}), 409
     
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': 'Erro ao registrar usuário. Por favor, tente novamente.'
-        }), 500
+        return jsonify({'message': f'Erro ao registrar: {str(e)}'}), 500
 
 @app.route('/api/auth/login', methods=['POST'])
 def login():
@@ -314,10 +286,7 @@ def login():
         data = request.get_json()
         
         if not data or not all(k in data for k in ('email', 'password')):
-            return jsonify({
-                'success': False,
-                'message': 'Campos obrigatórios: email e senha'
-            }), 400
+            return jsonify({'message': 'Email e senha são obrigatórios'}), 400
         
         email = data['email'].strip().lower()
         password = data['password']
@@ -330,10 +299,7 @@ def login():
         
         if not user:
             conn.close()
-            return jsonify({
-                'success': False,
-                'message': 'Email ou senha incorretos'
-            }), 401
+            return jsonify({'message': 'Email ou senha incorretos'}), 401
         
         user_id = user['id']
         name = user['name']
@@ -341,10 +307,7 @@ def login():
         
         if not verify_password(password, password_hash):
             conn.close()
-            return jsonify({
-                'success': False,
-                'message': 'Email ou senha incorretos'
-            }), 401
+            return jsonify({'message': 'Email ou senha incorretos'}), 401
         
         # Update login status
         c.execute('UPDATE users SET is_logged_in = 1 WHERE id = ?', (user_id,))
@@ -359,7 +322,6 @@ def login():
         }
         
         return jsonify({
-            'success': True,
             'message': 'Login realizado com sucesso',
             'token': token,
             'user': {
@@ -370,10 +332,7 @@ def login():
         }), 200
     
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': 'Erro ao fazer login. Por favor, tente novamente.'
-        }), 500
+        return jsonify({'message': f'Erro ao fazer login: {str(e)}'}), 500
 
 @app.route('/api/auth/logout', methods=['POST'])
 def logout():
@@ -440,32 +399,19 @@ def verify_token_route():
         token = data.get('token')
         
         if not token:
-            return jsonify({
-                'success': False,
-                'message': 'Token não fornecido'
-            }), 400
+            return jsonify({'message': 'Token não fornecido'}), 400
         
         if token in SESSIONS:
             session_data = SESSIONS[token]
             if session_data['expires'] >= datetime.now():
-                return jsonify({
-                    'success': True,
-                    'message': 'Token válido',
-                    'user_id': session_data['user_id']
-                }), 200
+                return jsonify({'message': 'Token válido', 'valid': True, 'user_id': session_data['user_id']}), 200
             else:
                 del SESSIONS[token]
         
-        return jsonify({
-            'success': False,
-            'message': 'Token inválido ou expirado'
-        }), 401
+        return jsonify({'message': 'Token inválido ou expirado', 'valid': False}), 401
     
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'message': 'Erro ao verificar token. Por favor, tente novamente.'
-        }), 500
+        return jsonify({'message': f'Erro ao verificar token: {str(e)}'}), 500
 
 # ==================== ADMIN AUTHENTICATION ROUTES ====================
 
@@ -475,10 +421,7 @@ def registrar():
     data = request.get_json()
     
     if not data:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Nenhum dado fornecido'
-        }), 400
+        return jsonify({'mensagem': 'Dados inválidos.'}), 400
     
     name = data.get('name', '').strip()
     email = data.get('email', '').strip()
@@ -489,11 +432,7 @@ def registrar():
     
     errors = validar_entrada(name, email, senha, chave)
     if errors:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Validação falhou',
-            'erros': errors
-        }), 400
+        return jsonify({'mensagem': ' '.join(errors)}), 400
     
     try:
         conn = sqlite3.connect(ADMINS_DB)
@@ -502,10 +441,7 @@ def registrar():
         c.execute('SELECT id FROM administradores WHERE email = ?', (email,))
         if c.fetchone():
             conn.close()
-            return jsonify({
-                'success': False,
-                'mensagem': 'Este email já está cadastrado como administrador'
-            }), 409
+            return jsonify({'mensagem': 'Email já cadastrado.'}), 409
         
         login_base = login
         counter = 1
@@ -525,21 +461,14 @@ def registrar():
         conn.close()
         
         return jsonify({
-            'success': True,
-            'mensagem': 'Administrador registrado com sucesso!',
+            'mensagem': 'Registro realizado com sucesso!',
             'login': login
         }), 201
     
     except sqlite3.IntegrityError:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Erro ao registrar: dados duplicados'
-        }), 409
+        return jsonify({'mensagem': 'Erro ao registrar: dados duplicados.'}), 409
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Erro ao registrar administrador. Por favor, tente novamente.'
-        }), 500
+        return jsonify({'mensagem': f'Erro ao registrar: {str(e)}'}), 500
 
 @app.route('/api/admin/login', methods=['POST'])
 def admin_login():
@@ -547,20 +476,14 @@ def admin_login():
     data = request.get_json()
     
     if not data:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Nenhum dado fornecido'
-        }), 400
+        return jsonify({'mensagem': 'Dados inválidos.'}), 400
     
     login_user = data.get('login', '').strip()
     senha = data.get('senha', '').strip()
     chave = data.get('chave', '').strip()
     
     if not login_user or not senha or not chave:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Campos obrigatórios: login, senha e chave da biblioteca'
-        }), 400
+        return jsonify({'mensagem': 'Por favor preencha todos os campos.'}), 400
     
     try:
         conn = sqlite3.connect(ADMINS_DB)
@@ -573,24 +496,15 @@ def admin_login():
         conn.close()
         
         if not admin:
-            return jsonify({
-                'success': False,
-                'mensagem': 'Login ou senha incorretos'
-            }), 401
+            return jsonify({'mensagem': 'Login ou senha incorretos.'}), 401
         
         admin_id, login_db, senha_hash, chave_db, name, email = admin
         
         if not check_password_hash(senha_hash, senha):
-            return jsonify({
-                'success': False,
-                'mensagem': 'Login ou senha incorretos'
-            }), 401
+            return jsonify({'mensagem': 'Login ou senha incorretos.'}), 401
         
         if chave != chave_db:
-            return jsonify({
-                'success': False,
-                'mensagem': 'Chave da biblioteca incorreta'
-            }), 401
+            return jsonify({'mensagem': 'Chave da biblioteca incorreta.'}), 401
         
         token = gerar_token()
         ADMIN_SESSIONS[token] = {
@@ -601,16 +515,12 @@ def admin_login():
         }
         
         return jsonify({
-            'success': True,
-            'mensagem': 'Login realizado com sucesso',
+            'mensagem': 'Login realizado com sucesso.',
             'token': token
         }), 200
     
     except Exception as e:
-        return jsonify({
-            'success': False,
-            'mensagem': 'Erro ao fazer login. Por favor, tente novamente.'
-        }), 500
+        return jsonify({'mensagem': f'Erro ao fazer login: {str(e)}'}), 500
 
 @app.route('/api/admin/perfil', methods=['GET'])
 @verificar_token
