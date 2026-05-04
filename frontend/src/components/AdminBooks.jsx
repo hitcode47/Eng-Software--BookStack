@@ -415,15 +415,28 @@ async function rejectRequest(requestId) {
               <p>
                 <strong>Data da solicitação:</strong> {request.request_date}
               </p>
-              <button
-                type="button"
-                className="button"
-                style={{ marginTop: "12px" }}
-                onClick={() => approveRequest(request.request_id)}
-                disabled={loading}
-              >
-                {loading ? "Processando..." : "Aprovar empréstimo"}
-              </button>
+              <div style={{ display: "flex", gap: "12px", marginTop: "12px" }}>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => approveRequest(request.request_id)}
+                  disabled={loading}
+                  style={{ flex: 1 }}
+                >
+                  {loading ? "Processando..." : "Aprovar empréstimo"}
+                </button>
+                <button
+                  type="button"
+                  className="button"
+                  onClick={() => rejectRequest(request.request_id)}
+                  disabled={loading}
+                  style={{ flex: 1, backgroundColor: "#dc3545", borderColor: "#dc3545" }}
+                  onMouseEnter={(e) => e.target.style.backgroundColor = "#c82333"}
+                  onMouseLeave={(e) => e.target.style.backgroundColor = "#dc3545"}
+                >
+                  {loading ? "Processando..." : "Negar empréstimo"}
+                </button>
+              </div>
             </div>
           ))
         )}
